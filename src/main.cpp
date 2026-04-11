@@ -6,6 +6,11 @@
 #include "motion.h"
 #include "temp_hum.h"
 #include "water.h"
+#include <WiFi.h>
+
+// WiFi credentials
+const char* ssid = "Wokwi-GUEST";
+const char* password = "";
 
 // Set to true to enable simulation mode, false to read actual sensor values
 bool simulationMode = true; 
@@ -15,7 +20,39 @@ bool simulationMode = true;
 /////////////////////////////////////////////////////////////////////////////
 
 void setup() {
+
     Serial.begin(115200);
+    delay(1000);
+    
+     // Connect to WiFi
+    Serial.println("Connecting to WiFi...");
+    WiFi.begin(ssid, password);
+    
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+        delay(500);
+        Serial.print(".");
+        attempts++;
+    }
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.println(" WiFi connected!");
+    } else {
+        Serial.println(" WiFi connection failed!");
+    }
+
+
+    //TIME FOR AZURE IOT HUB
+    configTime(0, 0, "pool.ntp.org");
+
+    Serial.print("Syncing time...");
+    while (time(NULL) < 100000) {
+    delay(500);
+    Serial.print(".");
+    }
+    Serial.println(" done");
+
+    
     srand(time(NULL));
 
     pinMode(GAS_DIGITAL_PIN, INPUT);
@@ -52,6 +89,10 @@ void loop() {
 
     Serial.printf("---------------------------------------------\r\n");
 
-    //OPÓŹNIENIE 2 SEKUNDY MIĘDZY KOLEJNYMI PĘTLAMI
-    delay(2000);
+    //OPÓŹNIENIE 10 SEKUND MIĘDZY KOLEJNYMI PĘTLAMI
+    delay(10000);
 }
+
+//NOTE
+// TO CHECK PAYLOADS GO TO https://portal.azure.com/#cloudshell/ 
+// AND RUN: az iot hub monitor-events --hub-name YOUR_HUB_NAME --device-id YOUR_DEVICE_ID --properties all

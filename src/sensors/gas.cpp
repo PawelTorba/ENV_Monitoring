@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <stdlib.h>
 #include <time.h>
+#include "azure.h"
 
 // ===== SIMULATION =====
 int generateFakeGasValue() {
@@ -30,6 +31,7 @@ void handleGasValues(int analogValue, int digitalValue, int now) {
     Serial.printf("[GAS] Payload: %s\r\n", payload);
     
     //TO DO: SEND payload TO AZURE IOT HUB
+    sendToIoTHub(payload);
 }
 
 void handleGasSensor(bool simulationMode, int now) {

@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <stdlib.h>
 #include <time.h>
+#include "azure.h"
 
 int lastMotionTime = 0; // Timestamp of the last detected motion
 bool occupied = false; // Flag to track if the area is currently occupied
@@ -22,6 +23,7 @@ void notifyMotionDetected(int now) {
     
     Serial.printf("[MOTION] Payload: %s\r\n", payload);
     //TO DO: SEND ALERT TO AZURE OR OTHER CLOUD SERVICE
+    sendToIoTHub(payload);
     //TO DO: ADD LED ALERT
 }
 
@@ -33,6 +35,7 @@ void notifyNoMotion(int now) {
     now, "false");  
     Serial.printf("[MOTION] Payload: %s\r\n", payload);
     //TO DO: SEND ALERT TO AZURE OR OTHER CLOUD SERVICE
+    sendToIoTHub(payload);
 }
 
 void handleMotionSensor(bool simulationMode, int now) {

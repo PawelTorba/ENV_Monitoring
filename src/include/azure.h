@@ -1,23 +1,18 @@
-// #ifndef AZURE_H
-// #define AZURE_H
+#ifndef AZURE_H
+#define AZURE_H
+#include "time.h"
+#include "mbedtls/base64.h"
 
-// #include <WiFi.h>
-// #include <WiFiClientSecure.h>
-// #include <PubSubClient.h>
+extern const char* ssid;
+extern const char* password;
+extern const char* iothubHost;
+extern const char* deviceId;
+extern const char* deviceKey;
 
-// extern const char* ssid;
-// extern const char* password;
-// extern const char* iothubHost;
-// extern const char* deviceId;
-// extern const char* deviceKey;
+String createSasToken();
 
-// WiFiClientSecure wifiClient;
-// PubSubClient mqtt(wifiClient);
+void connectIoTHub();
 
-// String createSasToken();
+void sendToIoTHub(String payload);
 
-// void connectIoTHub();
-
-// void sendToIoTHub(int analogValue, int digitalValue);
-
-// #endif // AZURE_H
+#endif // AZURE_H

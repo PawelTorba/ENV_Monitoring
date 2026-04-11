@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <stdlib.h>
 #include <time.h>
+#include "azure.h"
 
 // THIS DHT SENSOR CODE CAN ONLY HANDLE SIMULATION MODE, REAL SENSOR READING CODE IS NOT IMPLEMENTED YET
 
@@ -34,6 +35,7 @@ void handleDHTValues(dht_reading_t data, int now) {
     
     Serial.printf("[DHT] Payload: %s\r\n", payload);
     //TO DO: SEND payload TO AZURE IOT HUB
+    sendToIoTHub(payload);
 }
 
 void handleDHTSensor(bool simulationMode, int now){

@@ -1,36 +1,120 @@
-// #include <WiFi.h>
-// #include <WiFiClientSecure.h>
-// #include <PubSubClient.h>
+#include "mbedtls/md.h"
+#include <WiFi.h>
+#include "azure.h"
 
-// const char* ssid = "Dom210A";
-// const char* password = "721469827";
-// const char* iothubHost = "your-hub.azure-devices.net";
-// const char* deviceId = "Environment-monitoring";
-// const char* deviceKey = "your-device-key";
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
-// WiFiClientSecure wifiClient;
-// PubSubClient mqtt(wifiClient);
+WiFiClientSecure wifiClient;
+HTTPClient httpClient;
 
-// String createSasToken() {
-//   // generate SAS token using deviceKey, hostname, and expiry
-//   // use HMAC-SHA256 and Base64 encode
-// }
+const char* iothubHost = "";
+const char* deviceId = "";
+const char* deviceKey = "";
 
-// void connectIoTHub() {
-//   mqtt.setServer(iothubHost, 8883);
-//   while (!mqtt.connected()) {
-//     String user = String(iothubHost) + "/" + deviceId + "/?api-version=2018-06-30";
-//     String token = createSasToken();
-//     if (!mqtt.connect(deviceId, user.c_str(), token.c_str())) {
-//       delay(5000);
-//     }
-//   }
-// }
+String urlEncode(const String &msg) {
+    String encoded = "";
+    char c;
+    char bufHex[4];
+    for (int i = 0; i < msg.length(); i++) {
+        c = msg.charAt(i);
+        if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+        encoded += c;
+        } else {
+        sprintf(bufHex, "%%%02X", c);
+        encoded += bufHex;
+        }
+    }
+    return encoded;
+}
 
-// void sendToIoTHub(int analogValue, int digitalValue) {
-//   if (!mqtt.connected()) {
-//     connectIoTHub();
-//   }
-//   String payload = "{\"analog\":" + String(analogValue) + ",\"digital\":" + String(digitalValue) + "}";
-//   mqtt.publish(("devices/" + String(deviceId) + "/messages/events/").c_str(), payload.c_str());
-// }
+String createSasToken() {
+    // For HTTP API, resource URI must include the device ID
+    String resourceUri = String(iothubHost) + "/devices/" + String(deviceId);
+    String encodedUri = urlEncode(resourceUri);
+
+    long expiry = time(NULL) + 3600;  // valid for 1 hour
+    String stringToSign = encodedUri + "\n" + String(expiry);
+
+    //DEBUGGING OUTPUT
+    // Serial.printf("Resource URI: %s\r\n", resourceUri.c_str());
+    // Serial.printf("Encoded URI: %s\r\n", encodedUri.c_str());
+    // Serial.printf("String to sign: %s\r\n", stringToSign.c_str());
+    // Serial.printf("Expiry: %ld\r\n", expiry);
+
+    // Decode device key (Base64)
+    size_t keyLen;
+    unsigned char key[64];
+    int result = mbedtls_base64_decode(key, sizeof(key), &keyLen,
+                            (const unsigned char *)deviceKey,
+                            strlen(deviceKey));
+    
+    if (result != 0) {
+        Serial.printf("Base64 decode error: %d\r\n", result);
+    }
+    
+    //DEBUGGING OUTPUT
+    //Serial.printf("Key length: %d\r\n", keyLen);
+
+    // HMAC-SHA256
+    unsigned char hmacResult[32];
+    mbedtls_md_context_t ctx;
+    mbedtls_md_init(&ctx);
+    mbedtls_md_setup(&ctx, mbedtls_md_info_from_type(MBEDTLS_MD_SHA256), 1);
+    mbedtls_md_hmac_starts(&ctx, key, keyLen);
+    mbedtls_md_hmac_update(&ctx,
+                            (const unsigned char *)stringToSign.c_str(),
+                            stringToSign.length());
+    mbedtls_md_hmac_finish(&ctx, hmacResult);
+    mbedtls_md_free(&ctx);
+
+    // Base64 encode signature
+    char base64Sig[64];
+    size_t sigLen;
+    mbedtls_base64_encode((unsigned char *)base64Sig, sizeof(base64Sig), &sigLen,
+                            hmacResult, 32);
+
+    base64Sig[sigLen] = '\0';
+    String signature = urlEncode(String(base64Sig));
+
+    //DEBUGGING OUTPUT
+    //.printf("Signature: %s\r\n", signature.c_str());
+
+    // Final SAS token - remove &skn=device
+    String sasToken = "SharedAccessSignature sr=" + encodedUri +
+                        "&sig=" + signature +
+                        "&se=" + String(expiry);
+
+    //DEBUGGING OUTPUT                
+    //Serial.printf("SAS Token: %s\r\n", sasToken.c_str());
+
+    return sasToken;
+}
+
+void connectIoTHub() {
+    wifiClient.setInsecure();
+    String token = createSasToken();
+    Serial.println("SAS Token created successfully");
+}
+
+void sendToIoTHub(String payload) {
+    String url = "https://" + String(iothubHost) + "/devices/" + String(deviceId) + "/messages/events?api-version=2020-09-30";
+    String token = createSasToken();
+    String authHeader = token;
+
+    wifiClient.setInsecure();
+    httpClient.begin(wifiClient, url);
+    httpClient.addHeader("Authorization", authHeader);
+    httpClient.addHeader("Content-Type", "application/json");
+
+    int httpCode = httpClient.POST(payload);
+
+    if (httpCode == 204) {
+        Serial.printf("Message sent successfully (HTTP %d)\r\n", httpCode);
+    } else {
+        Serial.printf("Message failed to send (HTTP %d)\r\n", httpCode);
+        Serial.println(httpClient.getString());
+    }
+
+    httpClient.end();
+}

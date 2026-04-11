@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <stdlib.h>
 #include <time.h>
+#include "azure.h"
 
 // ===== ALERTS =====
 void triggerAlarm_Water(int now) {
@@ -22,4 +23,5 @@ void handleWaterSensor(bool simulationMode, int now) {
     now, (waterState == 0) ? "true" : "false");
     
     Serial.printf("[WATER] Payload: %s\r\n", payload);
+    sendToIoTHub(payload);
 }
