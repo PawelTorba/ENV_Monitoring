@@ -9,20 +9,30 @@ int generateFakeGasValue() {
 }
 
 // ===== ALERTS =====
-void triggerAlarm_Gas(int value) {
-    Serial.printf("[GAS SENSOR] GAS ALERT %d\n", value);
-    //TO DO: SEND ALERT TO AZURE OR OTHER CLOUD SERVICE
+void triggerAlarm_Gas(int value, int now) {
+
     //TO DO: ADD LED ALERT
 
 }
 
-void handleGasValues(int analogValue, int digitalValue) {
-    Serial.printf("[GAS] Analog: %d | Digital: %d\n", analogValue, digitalValue);
-
-    //TO DO: SEND DATA TO AZURE OR OTHER CLOUD SERVICE
+void handleGasValues(int analogValue, int digitalValue, int now) {
+    // Create JSON payload structure for Azure IoT Hub
+    char payload[256];
+    snprintf(payload, sizeof(payload),
+        "{\"sensorType\":\"gas\",\"analog\":%d,\"digital\":%d,\"timestamp\":%d,\"threshold\":%d,\"alert\":%s}",
+        analogValue,
+        digitalValue,
+        now,
+        GAS_THRESHOLD,
+        (analogValue > GAS_THRESHOLD || digitalValue == 1) ? "true" : "false"
+    );
+    
+    Serial.printf("[GAS] Payload: %s\r\n", payload);
+    
+    //TO DO: SEND payload TO AZURE IOT HUB
 }
 
-void handleGasSensor(bool simulationMode) {
+void handleGasSensor(bool simulationMode, int now) {
     int analogValue;
     int digitalValue;
 
@@ -34,12 +44,8 @@ void handleGasSensor(bool simulationMode) {
         digitalValue = digitalRead(GAS_DIGITAL_PIN); // odczyt stanu cyfrowego z czujnika gazu
     }
 
-    handleGasValues(analogValue, digitalValue);
-
-    //HANDLE POTENTIAL ALERTS
-    if (analogValue > GAS_THRESHOLD || digitalValue == 1) {
-        triggerAlarm_Gas(analogValue);
-    }
+    handleGasValues(analogValue, digitalValue, now);
+    
 }
 
 

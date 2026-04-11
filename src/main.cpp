@@ -35,16 +35,22 @@ void loop() {
     int now = millis();
 
     // ===== GAS =====
-    handleGasSensor(simulationMode);
+    handleGasSensor(simulationMode, now);
+    delay(100);
 
     // ===== PIR =====
     handleMotionSensor(simulationMode, now);    
+    delay(100);
 
     // ===== DHT =====
-    handleDHTSensor(simulationMode);
+    handleDHTSensor(simulationMode, now);
+    delay(100);
 
     // ===== WATER =====
-    handleWaterSensor(simulationMode);
+    handleWaterSensor(simulationMode, now);
+    delay(100);
+
+    Serial.printf("---------------------------------------------\r\n");
 
     //OPÓŹNIENIE 2 SEKUNDY MIĘDZY KOLEJNYMI PĘTLAMI
     delay(2000);

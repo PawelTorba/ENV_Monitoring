@@ -13,21 +13,30 @@ dht_reading_t generateFakeDHT() {
     return f;
 }
 
-void triggerAlarm_DHT(dht_reading_t data) {
-    Serial.printf("[DHT SENSOR] ALARM DHT - Temp: %.2f Hum: %.2f\n",
-                  data.temperature, data.humidity);
-
+void triggerAlarm_DHT(dht_reading_t data, int now) {
     //TO DO: SEND ALERT TO AZURE OR OTHER CLOUD SERVICE
     //TO DO: ADD LED ALERT
 }
 
-void handleDHTValues(dht_reading_t data) {
-    Serial.printf("[DHT] T: %.2f H: %.2f\n", data.temperature, data.humidity);
+void handleDHTValues(dht_reading_t data, int now) {
 
-    //TO DO: SEND DATA TO AZURE OR OTHER CLOUD SERVICE
+// Create JSON payload structure for Azure IoT Hub
+    char payload[256];
+    snprintf(payload, sizeof(payload),
+        "{\"sensorType\":\"dht\",\"temperature\":%.2f,\"humidity\":%.2f,\"timestamp\":%d, \"alert\":%s, alert-object\": {\"temperatureAlert\": %s, \"humidityAlert\": %s}}",
+        data.temperature,
+        data.humidity,
+        now,
+        (data.temperature > TEMP_THRESHOLD || data.humidity > HUM_THRESHOLD) ? "true" : "false",
+        (data.temperature > TEMP_THRESHOLD) ? "true" : "false",
+        (data.humidity > HUM_THRESHOLD) ? "true" : "false"
+    );
+    
+    Serial.printf("[DHT] Payload: %s\r\n", payload);
+    //TO DO: SEND payload TO AZURE IOT HUB
 }
 
-void handleDHTSensor(bool simulationMode){
+void handleDHTSensor(bool simulationMode, int now){
     dht_reading_t dht;
 
     if (simulationMode) {
@@ -37,10 +46,6 @@ void handleDHTSensor(bool simulationMode){
         dht.humidity = 0;
     }
 
-    handleDHTValues(dht);
-
-    //HANDLE POTENTIAL ALERTS
-    if (dht.temperature > TEMP_THRESHOLD || dht.humidity > HUM_THRESHOLD) {
-        triggerAlarm_DHT(dht);
+    handleDHTValues(dht, now);
     }
-}
+

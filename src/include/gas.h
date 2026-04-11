@@ -6,8 +6,8 @@
 #define GAS_THRESHOLD 700
 
 int generateFakeGasValue();
-void triggerAlarm_Gas(int value);
-void handleGasSensor(bool simulationMode);
-void handleGasValues(int analogValue, int digitalValue);
+void triggerAlarm_Gas(int value, int now);
+void handleGasSensor(bool simulationMode, int now);
+void handleGasValues(int analogValue, int digitalValue, int now);
 
 #endif // GAS_H

@@ -14,15 +14,24 @@ int simulatePIR() {
     return (rand() % 10) < 1; // 10% chance of detecting motion
 }
 
-void notifyMotionDetected() {
-    Serial.printf("[MOTION SENSOR] MOVEMENT DETECTED %d\n", millis());
+void notifyMotionDetected(int now) {
+    char payload[256];
+    snprintf(payload, sizeof(payload),
+    "{\"sensorType\":\"motion\",\"timestamp\":%d,\"alert\":%s}",
+    now, "true");
+    
+    Serial.printf("[MOTION] Payload: %s\r\n", payload);
     //TO DO: SEND ALERT TO AZURE OR OTHER CLOUD SERVICE
     //TO DO: ADD LED ALERT
-
 }
 
-void notifyNoMotion() {
-    Serial.printf("[MOTION SENSOR] NO MOVEMENT %d\n", millis());
+void notifyNoMotion(int now) {
+    //Serial.printf("[MOTION SENSOR] NO MOVEMENT %d\n", millis());
+    char payload[256];
+    snprintf(payload, sizeof(payload),
+    "{\"sensorType\":\"motion\",\"timestamp\":%d,\"alert\":%s}",
+    now, "false");  
+    Serial.printf("[MOTION] Payload: %s\r\n", payload);
     //TO DO: SEND ALERT TO AZURE OR OTHER CLOUD SERVICE
 }
 
@@ -34,12 +43,12 @@ void handleMotionSensor(bool simulationMode, int now) {
 
         if (!occupied) {
             occupied = true;
-            notifyMotionDetected();
+            notifyMotionDetected(now);
         }
     } else {
         if (occupied && (now - lastMotionTime > ABSENCE_TIMEOUT_MS)) {
             occupied = false;
-            notifyNoMotion();
+            notifyNoMotion(now);
         }
     }
 }

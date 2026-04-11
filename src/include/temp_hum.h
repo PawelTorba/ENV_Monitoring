@@ -14,8 +14,8 @@ typedef struct {
     float humidity;
 } dht_reading_t;
 
-void triggerAlarm_DHT(dht_reading_t data);
-void handleDHTSensor(bool simulationMode);
+void triggerAlarm_DHT(dht_reading_t data, int now);
+void handleDHTSensor(bool simulationMode, int now);
 
 // SIMULATION
 dht_reading_t generateFakeDHT(void);

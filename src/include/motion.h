@@ -10,8 +10,8 @@
 extern int lastMotionTime; // Timestamp of the last detected motion
 extern bool occupied; // Flag to track if the area is currently occupied
 
-void notifyMotionDetected();
-void notifyNoMotion();
+void notifyMotionDetected(int now);
+void notifyNoMotion(int now);
 int simulatePIR();
 void handleMotionSensor(bool simulationMode, int now);
 
