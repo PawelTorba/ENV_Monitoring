@@ -8,8 +8,8 @@
 WiFiClientSecure wifiClient;
 HTTPClient httpClient;
 
-const char* iothubHost = "";
-const char* deviceId = "";
+const char* iothubHost = ""; // 
+const char* deviceId = ""; 
 const char* deviceKey = "";
 
 String urlEncode(const String &msg) {

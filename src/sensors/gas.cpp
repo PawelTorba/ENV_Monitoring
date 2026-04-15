@@ -5,15 +5,35 @@
 #include "azure.h"
 
 // ===== SIMULATION =====
-int generateFakeGasValue() {
-    return rand() % 1024;
+
+// stara symulacja gazu
+// int generateFakeGasValue() {
+//     return rand() % 1024;
+// }
+
+int generateFakeGasValue()  {
+    // bardziej realistyczna symulacja poziomu gazu, z okresami normalnego poziomu i krótkimi skokami do wysokiego poziomu
+    static int gasLevel = 0;
+    static int leakTimer = 0;
+
+    if (leakTimer > 0) {
+        leakTimer--;
+        gasLevel = 300 + rand() % 200; // wysoki poziom
+        return gasLevel;
+    }
+
+    // bardzo rzadkie zdarzenie
+    if ((rand() % 2000) == 0) {
+        leakTimer = 10 + rand() % 20;
+    }
+
+    gasLevel = rand() % 50; // normalne tło
+    return gasLevel;
 }
 
 // ===== ALERTS =====
 void triggerAlarm_Gas(int value, int now) {
-
     //TO DO: ADD LED ALERT
-
 }
 
 void handleGasValues(int analogValue, int digitalValue, int now) {

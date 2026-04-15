@@ -69,7 +69,7 @@ void setup() {
 //////////////////////////////////////////////////////////
 void loop() {
 
-    int now = millis();
+    int now = time(NULL);
 
     // ===== GAS =====
     handleGasSensor(simulationMode, now);
@@ -93,6 +93,11 @@ void loop() {
     delay(10000);
 }
 
+// TO DO 
+    // 1 - ALERTY - Azure Function (message routing + function app + alerty na maila) 
+    // 2 - WYKRESY - HTML lokalny -> fetch → Azure Function (z key) -> refresh co 60s 
+
 //NOTE
 // TO CHECK PAYLOADS GO TO https://portal.azure.com/#cloudshell/ 
 // AND RUN: az iot hub monitor-events --hub-name YOUR_HUB_NAME --device-id YOUR_DEVICE_ID --properties all
+// Infrastruktura-krytyczna + Environment-monitoring
