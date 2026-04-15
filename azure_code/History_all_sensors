@@ -1,0 +1,92 @@
+const { BlobServiceClient } = require("@azure/storage-blob");
+
+module.exports = async function (context, req) {
+    try {
+        const connStr = process.env.STORAGE_CONNECTION_STRING;
+        const containerName = "envmonitorindatacontainer";
+
+        if (!connStr) {
+            throw new Error("Missing STORAGE_CONNECTION_STRING");
+        }
+
+        const date = req.query.date;
+
+        if (!date) {
+            throw new Error("Missing ?date=YYYY-MM-DD");
+        }
+
+        const [year, month, day] = date.split("-");
+
+        const blobServiceClient = BlobServiceClient.fromConnectionString(connStr);
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        const result = [];
+
+        for await (const blob of containerClient.listBlobsFlat()) {
+
+            const name = blob.name;
+
+            if (!name.includes(`${year}/${month}/${day}`)) {
+                continue;
+            }
+
+            const parts = name.split("/");
+            const fileName = parts[parts.length - 1]; // "21.json"
+            const minuteStr = fileName.replace(".json", "");
+
+            const minute = parseInt(minuteStr);
+
+            if (minute % 10 !== 0) {
+                continue;
+            }
+
+            const blobClient = containerClient.getBlockBlobClient(name);
+            const download = await blobClient.download();
+            const text = await streamToString(download.readableStreamBody);
+
+            const lines = text
+                .split("\n")
+                .map(l => l.trim())
+                .filter(l => l.length > 0);
+
+            if (lines.length === 0) continue;
+
+            const last3 = lines.slice(-3);
+
+            result.push({
+                blob: name,
+                time: `${date} ${String(minute).padStart(2, "0")}:00`,
+                raw: last3
+            });
+        }
+
+        // sort chronologicznie
+        result.sort((a, b) => a.time.localeCompare(b.time));
+
+        context.res = {
+            status: 200,
+            headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*"
+            },
+            body: result
+        };
+
+    } catch (err) {
+        context.log("ERROR:", err);
+
+        context.res = {
+            status: 500,
+            body: { error: err.message }
+        };
+    }
+};
+
+function streamToString(stream) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        stream.on("data", c => chunks.push(c.toString()));
+        stream.on("end", () => resolve(chunks.join("")));
+        stream.on("error", reject);
+    });
+}
