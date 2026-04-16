@@ -8,9 +8,9 @@
 WiFiClientSecure wifiClient;
 HTTPClient httpClient;
 
-const char* iothubHost = "Infrastruktura-krytyczna.azure-devices.net";
-const char* deviceId = "Environment-monitoring";
-const char* deviceKey = "JlHGvMqJ8BR8NP8bDpHCkXFlx4XjbIo2qLBimJpdMhI=";
+const char* iothubHost = "";
+const char* deviceId = "";
+const char* deviceKey = "";
 
 String urlEncode(const String &msg) {
     String encoded = "";
