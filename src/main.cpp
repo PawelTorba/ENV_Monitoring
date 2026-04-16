@@ -43,7 +43,7 @@ void setup() {
 
 
     //TIME FOR AZURE IOT HUB
-    configTime(0, 0, "pool.ntp.org");
+    configTime(3600, 0, "pool.ntp.org");
 
     Serial.print("Syncing time...");
     while (time(NULL) < 100000) {
