@@ -1,0 +1,181 @@
+const { BlobServiceClient } = require("@azure/storage-blob");
+const nodemailer = require("nodemailer");
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS
+    }
+});
+
+function streamToString(stream) {
+    return new Promise((resolve, reject) => {
+        const chunks = [];
+        stream.on("data", c => chunks.push(c.toString()));
+        stream.on("end", () => resolve(chunks.join("")));
+        stream.on("error", reject);
+    });
+}
+
+function parseLine(line) {
+    try {
+        const obj = JSON.parse(line.trim());
+        if (!obj.Body) return null;
+
+        const decoded = Buffer
+            .from(obj.Body, "base64")
+            .toString("utf-8");
+
+        return JSON.parse(decoded);
+    } catch (e) {
+        return null;
+    }
+}
+
+async function sendAlertEmail(alerts) {
+
+    const subject = `ALERT SENSOR: ${alerts.map(a => a.sensorType).join(", ")}`;
+
+    const body = alerts.map(a => {
+
+        const date = new Date(a.timestamp * 1000);
+        const formattedDate = date.toLocaleString("pl-PL", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit"
+        });
+
+        let threshold = "N/A";
+        let reading = "N/A";
+
+        if (a.sensorType === "gas") {
+            threshold = a.threshold;
+            reading = a.analog; // wartość, która wywołała alert
+        }
+
+        if (a.sensorType === "dht") {
+            threshold = `temp: ${a.temperatureThreshold}, hum: ${a.humidityThreshold}`;
+            reading = `temp: ${a.temperature}, hum: ${a.humidity}`;
+        }
+
+        if (a.sensorType === "water") {
+            threshold = "triggered";
+            reading = "water detected"; // brak liczbowej wartości
+        }
+
+        return `
+ALERT SENSOR: ${a.sensorType}
+TIME: ${formattedDate}
+READING: ${reading}
+THRESHOLD: ${threshold}
+        `.trim();
+
+    }).join("\n\n----------------\n\n");
+
+    await transporter.sendMail({
+        from: process.env.GMAIL_USER,
+        to: process.env.ALERT_EMAIL_TO,
+        subject,
+        text: body
+    });
+}
+
+module.exports = async function (context, req) {
+    try {
+
+        const connStr = process.env.STORAGE_CONNECTION_STRING;
+        const containerName = "envmonitorindatacontainer";
+
+        const blobServiceClient = BlobServiceClient.fromConnectionString(connStr);
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        // 🔍 find latest blob
+        let latestBlob = null;
+        let latestTime = 0;
+
+        for await (const blob of containerClient.listBlobsFlat()) {
+            const t = new Date(blob.properties.lastModified).getTime();
+
+            if (t > latestTime) {
+                latestTime = t;
+                latestBlob = blob.name;
+            }
+        }
+
+        if (!latestBlob) {
+            throw new Error("No blobs found");
+        }
+
+        const blobClient = containerClient.getBlockBlobClient(latestBlob);
+        const download = await blobClient.download();
+
+        const text = await streamToString(download.readableStreamBody);
+
+        const lines = text
+            .split("\n")
+            .map(l => l.trim())
+            .filter(Boolean);
+
+        const parsed = lines
+            .map(parseLine)
+            .filter(Boolean);
+
+        context.log("DECODED SENSOR DATA:", JSON.stringify(parsed, null, 2));
+
+        const last3 = parsed.slice(-3);
+
+        context.log("LAST 3:", last3);
+
+        const alerts = [];
+
+        for (const s of last3) {
+
+            let isAlert = false;
+
+            if (s.sensorType === "gas") {
+                isAlert = s.alert === true;
+            }
+
+            if (s.sensorType === "dht") {
+                isAlert =
+                    s.alert === true ||
+                    s.alertTemp === true ||
+                    s.alertHum === true;
+            }
+
+            if (s.sensorType === "water") {
+                isAlert = s.alert === true;
+            }
+
+            if (isAlert) {
+                alerts.push(s);
+            }
+        }
+
+        context.log("ALERTS:", alerts);
+
+        if (alerts.length > 0) {
+            await sendAlertEmail(alerts);
+        }
+
+        context.res = {
+            status: 200,
+            body: {
+                checked: last3,
+                alertsTriggered: alerts.length
+            }
+        };
+
+    } catch (err) {
+        context.log("ERROR:", err);
+
+        context.res = {
+            status: 500,
+            body: { error: err.message }
+        };
+    }
+};
