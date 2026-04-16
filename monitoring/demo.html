@@ -1,44 +1,323 @@
 <!DOCTYPE html>
 <html>
-<body>
+<head>
+    <meta charset="UTF-8">
+    <title>IoT Monitoring System</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="code.js"></script>
 
-<h3>IoT Latest Debug</h3>
+
+</head>
+
+<body>
+<h1>IOT SERVER MONITORING SYSTEM</h1>
+
+<h3>MAIN TERMINAL</h3>
 
 <button onclick="loadData()">Load latest</button>
+<button onclick="loadFakeData()">Load Fake</button>
+<button onclick="toggleAutoRefresh()" id="autoBtn">AUTO REFRESH OFF</button>
 
 <pre id="output">click button...</pre>
 
+<h3>LATEST VALUES</h3>
+
+<div style="display:flex; gap:20px;">
+
+    <!-- TEMPERATURE -->
+    <div style="background:white; padding:20px; border-radius:10px; width:200px;">
+        <h3>TEMPERATURE</h3>
+        <p id="temp-value" style="font-size:32px; margin:0;">-- °C</p>
+        <small id="temp-time">--:--:--</small>
+        <div id="temp-status"></div>
+    </div>
+
+    <!-- HUMIDITY -->
+    <div style="background:white; padding:20px; border-radius:10px; width:200px;">
+        <h3>HUMIDITY</h3>
+        <p id="hum-value" style="font-size:32px; margin:0;">-- %</p>
+        <small id="hum-time">--:--:--</small>
+        <div id="hum-status"></div>
+    </div>
+
+    <!-- FLOOD RISK -->
+    <div style="background:white; padding:20px; border-radius:10px; width:200px;">
+        <h3>FLOOD DETECTION</h3>
+        <p id="water-value" style="font-size:32px; margin:0;">MISSING DATA</p>
+        <small id="water-time">--:--:--</small>
+        <div id="water-status"></div>
+    </div>
+
+    <!-- GAS SENSOR -->
+    <div style="background:white; padding:20px; border-radius:10px; width:200px;">
+        <h3>SMOKE DETECTOR</h3>
+        <p id="gas-value" style="font-size:32px; margin:0;">MISSING DATA</p>
+        <small id="gas-time">--:--:--</small>
+        <div id="gas-status"></div>
+    </div>
+
+    <!-- FAILURES  -->
+    <div style="background:white; padding:20px; border-radius:10px; width:400px;">
+        <h3>FAILURES</h3>
+
+        <div id="failures-list">
+        <small>NO FAILURES</small>
+        </div>
+
+        <h3>TIME SINCE LAST FAILURE</h3>
+        <div id="last-failure-time">
+            <small>--:--:--</small>
+        </div>
+    </div>
+
+</div>  
+<div class="analytics">
+
+    <h3>ANALYTICS</h3>
+    <div class="tabs">
+        <button onclick="showTab('live')">LIVE</button>
+        <button onclick="showTab('history')">HISTORY</button>
+    </div>
+    <div id="live" class="charts">
+        <!-- CHART TEMP -->
+        <div class="chart-box">
+            <canvas id="tempChart"></canvas>
+        </div>
+
+        <!-- CHART HUM -->
+        <div class="chart-box">
+            <canvas id="humChart"></canvas>        
+        </div>
+        <!-- CHART GAS -->
+        <div class="chart-box">
+            <canvas id="gasChart"></canvas>
+        </div>
+    </div>
+
+</div>
+
 <script>
+/// [AUTO REFRESH FAKE/REAL DANE]
+let USE_FAKE = false;
+
+let autoRefresh = false;
+let autoInterval = null;
+
+function toggleAutoRefresh() {
+    autoRefresh = !autoRefresh;
+
+    const btn = document.getElementById("autoBtn");
+
+    if (autoRefresh) {
+        btn.textContent = "AUTO REFRESH ON";
+
+        autoInterval = setInterval(() => {
+            USE_FAKE ? loadFakeData() : loadData();
+        }, 60000);
+
+        USE_FAKE ? loadFakeData() : loadData();
+    } else {
+        btn.textContent = "AUTO REFRESH OFF";
+
+        clearInterval(autoInterval);
+        autoInterval = null;
+    }
+}
+
+/// [FAILURE HISTORY]
+
+const failureHistory = JSON.parse(localStorage.getItem("failureHistory") || "[]");
+let failures = failureHistory;
+const MAX_FAILURES = 5;
+let lastFailureTime = null;
+
+
+
+function updateFailureTimer() {
+    const el = document.getElementById("last-failure-time");
+
+    if (!lastFailureTime) {
+        el.innerHTML = "<small>--:--:--</small>";
+        return;
+    }
+
+    const diff = Math.floor((Date.now() - lastFailureTime) / 1000);
+
+    const h = String(Math.floor(diff / 3600)).padStart(2, "0");
+    const m = String(Math.floor((diff % 3600) / 60)).padStart(2, "0");
+    const s = String(diff % 60).padStart(2, "0");
+
+    el.innerHTML = `<small>${h}:${m}:${s}</small>`;
+}
+
+function addFailure(msg) {
+    const time = new Date();
+
+    failures.push({
+        msg,
+        time: time.getTime()
+    });
+
+    lastFailureTime = time.getTime();
+
+    // LIMIT 
+    while (failures.length > MAX_FAILURES) {
+        failures.shift();
+    }
+
+    renderFailures();
+    saveFailures();
+}
+
+function saveFailures() {
+    localStorage.setItem("failureHistory", JSON.stringify(failures));
+}
+
+function renderFailures() {
+    const box = document.getElementById("failures-list");
+
+    if (failures.length === 0) {
+        box.innerHTML = "<small>NO FAILURES</small>";
+        return;
+    }
+
+    box.innerHTML = "";
+
+    failures.forEach(f => {
+        const div = document.createElement("div");
+        div.className = "alarm-text";
+        div.style.display = "flex";
+        div.style.justifyContent = "space-between";
+        div.style.fontSize = "11px";
+
+        const msg = document.createElement("span");
+        msg.textContent = f.msg;
+
+        const time = document.createElement("span");
+        time.textContent = new Date(f.time).toLocaleTimeString();
+        time.style.opacity = "0.6";
+
+        div.appendChild(msg);
+        div.appendChild(time);
+
+        box.appendChild(div);
+    });
+}
+
+/// [CHARTS / ANALYTICS]
+
+const tempHistory = JSON.parse(localStorage.getItem("tempHistory") || "[]");
+const humHistory = JSON.parse(localStorage.getItem("humHistory") || "[]");
+const gasHistory = JSON.parse(localStorage.getItem("gasHistory") || "[]");
+const labels = JSON.parse(localStorage.getItem("labels") || "[]");
+
+
+const tempChart = new Chart(document.getElementById("tempChart"), {
+    type: "line",
+    data: {
+        labels: labels,
+        datasets: [{
+            label: "Temperature °C",
+            data: tempHistory,
+            borderWidth: 2,
+            tension: 0.3
+        }]
+    }
+});
+
+const humChart = new Chart(document.getElementById("humChart"), {
+    type: "line",
+    data: {
+        labels: labels,
+        datasets: [{
+            label: "Humidity %",
+            data: humHistory,
+            borderWidth: 2,
+            tension: 0.3
+        }]
+    }
+});
+
+const gasChart = new Chart(document.getElementById("gasChart"), {
+    type: "line",
+    data: {
+        labels: labels,
+        datasets: [{
+            label: "Gas Level",
+            data: gasHistory,
+            borderWidth: 2,
+            tension: 0.3
+        }]
+    }
+});
+
+if (labels.length > 0) {
+    tempChart.update();
+    humChart.update();
+    gasChart.update();
+}
+
+function addPoint(temp, hum, gas) {
+    const time = new Date().toLocaleTimeString();
+
+    labels.push(time);
+    tempHistory.push(temp);
+    humHistory.push(hum);
+    gasHistory.push(gas);
+
+
+    // limit (żeby nie zabić przeglądarki)
+    if (labels.length > 30) {
+        labels.shift();
+        tempHistory.shift();
+        humHistory.shift();
+    }
+    gasChart.update();
+    tempChart.update();
+    humChart.update();
+    saveHistory();
+}
+
+function saveHistory() {
+    localStorage.setItem("tempHistory", JSON.stringify(tempHistory));
+    localStorage.setItem("humHistory", JSON.stringify(humHistory));
+    localStorage.setItem("gasHistory", JSON.stringify(gasHistory));
+    localStorage.setItem("labels", JSON.stringify(labels));
+}
+
+/// [ LOAD DATA/FAKE ]
 async function loadData() {
-    const url = "AZURE FUNCTION URL HERE";
+    const url = "https://env-api-dxe4avbycpbmhygf.germanywestcentral-01.azurewebsites.net/api/Latest?code=RtPbic2cOrZwAWF_5kNEbTh3qzGazmdPGFOPFe2GjPOYAzFuzIDZIw==";
 
     document.getElementById("output").textContent = "Loading...";
 
     try {
-        console.log("Request:", url);
-
         const res = await fetch(url);
-
-        console.log("Status:", res.status);
-
-        const text = await res.text();
-
-        console.log("RAW RESPONSE:", text);
+        const raw = await res.text();
 
         if (!res.ok) {
-            throw new Error("HTTP " + res.status + " - " + text);
+            throw new Error(raw);
         }
 
-        let data;
+        const data = JSON.parse(raw);
 
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            throw new Error("Invalid JSON: " + text);
-        }
+        const decoded = data
+            .map(item => {
+                try {
+                    return JSON.parse(atob(item.Body));
+                } catch (e) {
+                    return null;
+                }
+            })
+            .filter(Boolean);
+
+        console.log("AZURE DECODED:", decoded);
+
+        updateUI(decoded);
 
         document.getElementById("output").textContent =
-            JSON.stringify(data, null, 2);
+            JSON.stringify(decoded, null, 2);
 
     } catch (err) {
         document.getElementById("output").textContent =
@@ -47,7 +326,160 @@ async function loadData() {
         console.error(err);
     }
 }
-</script>
 
+async function loadFakeData() {
+    document.getElementById("output").textContent = "FAKE MODE...";
+
+    const temp = (20 + Math.random() * 8).toFixed(1);
+    const hum = (40 + Math.random() * 25).toFixed(0);
+
+    const gasAlert = Math.random() < 0.15;
+    const waterAlert = Math.random() < 0.08;
+
+    const fakeDecoded = [
+        {
+            sensorType: "dht",
+            temperature: temp,
+            humidity: hum,
+            timestamp: Date.now() / 1000
+        },
+        {
+            sensorType: "gas",
+            alert: gasAlert,
+            analog: Math.floor(Math.random() * 900),
+            timestamp: Date.now() / 1000
+        },
+        {
+            sensorType: "water",
+            alert: waterAlert,
+            timestamp: Date.now() / 1000
+        }
+    ];
+
+    console.log("FAKE DATA:", fakeDecoded);
+
+    updateUI(fakeDecoded);
+}
+
+/// [ UI ]
+
+function updateUI(decoded) {
+
+    const dht = decoded.find(x => x.sensorType === "dht");
+    const gas = decoded.find(x => x.sensorType === "gas");
+    const water = decoded.find(x => x.sensorType === "water");
+
+    // =====================
+    // TEMPERATURE
+    // =====================
+    if (dht) {
+        const temp = parseFloat(dht.temperature ?? 0);
+
+        document.getElementById("temp-value").textContent = temp + " °C";
+
+        document.getElementById("temp-time").textContent =
+            dht.timestamp ? new Date(dht.timestamp * 1000).toLocaleTimeString() : "--:--:--";
+
+        const box = document.getElementById("temp-value").parentElement;
+        const status = document.getElementById("temp-status");
+
+        if (dht.alertTemp) {
+            addFailure("HIGH TEMPERATURE: " + temp + "°C");
+            box.classList.add("alarm");
+            status.innerHTML = '<span class="status-icon">⚠</span>';
+        } else {
+            box.classList.remove("alarm");
+            status.textContent = "";
+        }
+
+        document.getElementById("hum-value").textContent = dht.humidity + " %";
+
+        document.getElementById("hum-time").textContent =
+            dht.timestamp ? new Date(dht.timestamp * 1000).toLocaleTimeString() : "--:--:--";
+
+        const hum = parseFloat(dht.humidity);
+        const humBox = document.getElementById("hum-value").parentElement;
+        const humStatus = document.getElementById("hum-status");
+
+        if (dht.alertHum) {
+            humBox.classList.add("alarm");
+            addFailure("HIGH HUMIDITY: " + hum + "%");
+            humStatus.innerHTML = '<span class="status-icon">⚠</span>';
+        } else {
+            humBox.classList.remove("alarm");
+            humStatus.textContent = "";
+        }
+
+        addPoint(
+            parseFloat(dht.temperature),
+            parseFloat(dht.humidity),
+            gas ? (gas.analog ?? (gas.alert ? 1 : 0)) : 0
+        );
+    }
+
+    // =====================
+    // WATER
+    // =====================
+    if (water) {
+        const box = document.getElementById("water-value").parentElement;
+        const el = document.getElementById("water-value");
+        const status = document.getElementById("water-status");
+
+        document.getElementById("water-time").textContent =
+            water.timestamp ? new Date(water.timestamp * 1000).toLocaleTimeString() : "--:--:--";
+
+        el.textContent = water.alert ? "YES" : "NO";
+
+        if (water.alert) {
+            box.classList.add("alarm");
+            addFailure("FLOOD DETECTED");
+            status.innerHTML = '<span class="status-icon">⚠</span>';
+        } else {
+            box.classList.remove("alarm");
+            status.textContent = "";
+        }
+
+    } else {
+        document.getElementById("water-status").textContent = "";
+        document.getElementById("water-value").textContent = "NO DATA";
+    }
+
+    // =====================
+    // GAS
+    // =====================
+    if (gas) {
+        const box = document.getElementById("gas-value").parentElement;
+        const el = document.getElementById("gas-value");
+        const status = document.getElementById("gas-status");
+
+        document.getElementById("gas-time").textContent =
+            gas.timestamp ? new Date(gas.timestamp * 1000).toLocaleTimeString() : "--:--:--";
+
+        el.textContent = gas.alert ? "YES" : "NO";
+
+        if (gas.alert) {
+            box.classList.add("alarm");
+            addFailure("SMOKE DETECTED");
+            status.innerHTML = '<span class="status-icon">⚠</span>';
+        } else {
+            box.classList.remove("alarm");
+            status.textContent = "";
+        }
+
+    } else {
+        document.getElementById("gas-status").textContent = "";
+        document.getElementById("gas-value").textContent = "NO DATA";
+    }
+
+    document.getElementById("output").textContent =
+        JSON.stringify(decoded, null, 2);
+
+    renderFailures();
+}
+/// [TIMERS / RENDERS]
+
+setInterval(updateFailureTimer, 1000);
+renderFailures();
+</script>
 </body>
 </html>
