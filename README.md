@@ -18,7 +18,7 @@ To start monitoring the simulated values please install Live View in VSCode and 
 
 Project supports automatic email notifications using Gmail STP.
 
-//TO DO:
+//TO DO:<br>
 1 -- MOTION SENSOR - NIE DZIAŁA SYMULACJA - BRAK DANYCH WYSYŁANYCH DO AZURE <br>
 2 -- MOTION SENSOR - WYKRES KIEDY WYSTĘPOWAŁ RUCH A KIEDY NIE (STAN AKTYWNY/NIEAKTYWNY) - DO ZROBIENIA PO PUNKCIE 1 <br>
 3 -- AUTOREFRESH - NIE ODŚWIEŻA WARTOŚCI "LATEST VALUES" JEDYNIE WYKRESY LINIOWE <br>
