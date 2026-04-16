@@ -128,30 +128,39 @@ small {
     text-shadow: 0 0 15px red;
 }
 /* kontener wykresów */
-.charts {
-    display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
-}
 
-/* pojedynczy wykres */
-.chart-box {
+#mainChart {
     background: linear-gradient(145deg, #0b0b0b, #000000);
     border: 1px solid #ff2b2b;
     border-radius: 10px;
     width: 48%;
     min-width: 300px;
     height: 250px;
-
+    margin-top: 10px;
     box-shadow: 0 0 15px rgba(255, 0, 0, 0.2);
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     color: #ff2b2b;
     font-family: "Courier New", monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
 
+.historyChart {
+    background: linear-gradient(145deg, #0b0b0b, #000000);
+    border: 1px solid #ff2b2b;
+    border-radius: 10px;
+    width: 30%;
+    max-width: 48%;
+    height: 250px;
+    max-height: 400px;
+    margin-top: 10px;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.2);
+    align-items: center;
+    justify-content: center;
+    color: #ff2b2b;
+    font-family: "Courier New", monospace;
     text-transform: uppercase;
     letter-spacing: 1px;
 }

@@ -80,21 +80,20 @@
         <button onclick="showTab('history')">HISTORY</button>
     </div>
     <div id="live" class="charts">
-        <!-- CHART TEMP -->
-        <div class="chart-box">
-            <canvas id="tempChart"></canvas>
-        </div>
-
-        <!-- CHART HUM -->
-        <div class="chart-box">
-            <canvas id="humChart"></canvas>        
-        </div>
-        <!-- CHART GAS -->
-        <div class="chart-box">
-            <canvas id="gasChart"></canvas>
+        <div class="chart-box" style="width:100%; max-width:900px;">
+            <canvas id="mainChart"></canvas>
         </div>
     </div>
+    <div id="history" class="tab" style="display:none;">
+        <h3>HISTORY</h3>
 
+        <input type="date" id="historyDate">
+        <button onclick="loadHistory()">Load day</button>
+
+        <pre>Select Date</pre>
+
+        <canvas id="historyChart" class="historyChart"></canvas>
+</div>
 </div>
 
 <script>
@@ -212,50 +211,45 @@ const humHistory = JSON.parse(localStorage.getItem("humHistory") || "[]");
 const gasHistory = JSON.parse(localStorage.getItem("gasHistory") || "[]");
 const labels = JSON.parse(localStorage.getItem("labels") || "[]");
 
-
-const tempChart = new Chart(document.getElementById("tempChart"), {
+const mainChart = new Chart(document.getElementById("mainChart"), {
     type: "line",
     data: {
         labels: labels,
-        datasets: [{
-            label: "Temperature °C",
-            data: tempHistory,
-            borderWidth: 2,
-            tension: 0.3
-        }]
+        datasets: [
+            {
+                label: "Temperature °C",
+                data: tempHistory,
+                borderWidth: 2,
+                tension: 0.3
+            },
+            {
+                label: "Humidity %",
+                data: humHistory,
+                borderWidth: 2,
+                tension: 0.3
+            },
+            {
+                label: "Gas level",
+                data: gasHistory,
+                borderWidth: 2,
+                tension: 0.3
+            }
+        ]
+    },
+    options: {
+        scales: {
+            y: {
+                min: 0,
+                max: 75
+            }
+        }
     }
+    
 });
 
-const humChart = new Chart(document.getElementById("humChart"), {
-    type: "line",
-    data: {
-        labels: labels,
-        datasets: [{
-            label: "Humidity %",
-            data: humHistory,
-            borderWidth: 2,
-            tension: 0.3
-        }]
-    }
-});
-
-const gasChart = new Chart(document.getElementById("gasChart"), {
-    type: "line",
-    data: {
-        labels: labels,
-        datasets: [{
-            label: "Gas Level",
-            data: gasHistory,
-            borderWidth: 2,
-            tension: 0.3
-        }]
-    }
-});
 
 if (labels.length > 0) {
-    tempChart.update();
-    humChart.update();
-    gasChart.update();
+    mainChart.update();
 }
 
 function addPoint(temp, hum, gas) {
@@ -273,9 +267,7 @@ function addPoint(temp, hum, gas) {
         tempHistory.shift();
         humHistory.shift();
     }
-    gasChart.update();
-    tempChart.update();
-    humChart.update();
+    mainChart.update();
     saveHistory();
 }
 
@@ -285,6 +277,93 @@ function saveHistory() {
     localStorage.setItem("gasHistory", JSON.stringify(gasHistory));
     localStorage.setItem("labels", JSON.stringify(labels));
 }
+
+function showTab(tab) {
+    document.getElementById("live").style.display = tab === "live" ? "block" : "none";
+    document.getElementById("history").style.display = tab === "history" ? "block" : "none";
+}
+
+let historyChartInstance = null;
+
+function renderHistoryChart(data) {
+
+    const grouped = {};
+
+    data.forEach(item => {
+        const t = item.timestamp;
+
+        if (!t) return;
+
+        if (!grouped[t]) {
+            grouped[t] = {
+                time: new Date(t * 1000).toLocaleTimeString(),
+                temp: null,
+                hum: null,
+                gas: null
+            };
+        }
+
+        if (item.sensorType === "dht") {
+            grouped[t].temp = Number(item.temperature);
+            grouped[t].hum = Number(item.humidity);
+        }
+
+        if (item.sensorType === "gas") {
+            grouped[t].gas = Number(item.analog ?? 0);
+        }
+    });
+
+    const labels = [];
+    const temp = [];
+    const hum = [];
+    const gas = [];
+
+    Object.values(grouped).forEach(x => {
+        labels.push(x.time);
+        temp.push(x.temp);
+        hum.push(x.hum);
+        gas.push(x.gas);
+    });
+
+    const ctx = document.getElementById("historyChart");
+
+    if (historyChartInstance) {
+        historyChartInstance.destroy();
+    }
+
+    historyChartInstance = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: "Temperature",
+                    data: temp,
+                    borderWidth: 2
+                },
+                {
+                    label: "Humidity",
+                    data: hum,
+                    borderWidth: 2
+                },
+                {
+                    label: "Gas level",
+                    data: gas,
+                    borderWidth: 2
+                }
+            ]
+        },
+        options: {
+        scales: {
+            y: {
+                min: 0,
+                max: 75
+            }
+        }
+    }
+    });
+}
+
 
 /// [ LOAD DATA/FAKE ]
 async function loadData() {
@@ -359,6 +438,45 @@ async function loadFakeData() {
     console.log("FAKE DATA:", fakeDecoded);
 
     updateUI(fakeDecoded);
+}
+
+async function loadHistory() {
+    const date = document.getElementById("historyDate").value;
+
+    if (!date) {
+        alert("Select date first!");
+        return;
+    }
+
+    const url =
+        "https://env-api-dxe4avbycpbmhygf.germanywestcentral-01.azurewebsites.net/api/History_all_sensors"
+        + "?code=VX2ejFGtbBGFsZot9G9nMAbfmKSAkeyu54CfbBk-SPG_AzFugZW36A=="
+        + "&date=" + date;
+
+    try {
+        const res = await fetch(url);
+        const text = await res.text();
+
+        if (!res.ok) throw new Error(text);
+
+        const raw = JSON.parse(text);
+
+        const decoded = raw.flatMap(block => {
+            return block.raw.map(r => {
+                try {
+                    const parsed = JSON.parse(r);
+                    return JSON.parse(atob(parsed.Body));
+                } catch {
+                    return null;
+                }
+            });
+        }).filter(Boolean);
+
+        renderHistoryChart(decoded);
+
+    } catch (err) {
+        console.error(err);
+    }
 }
 
 /// [ UI ]
