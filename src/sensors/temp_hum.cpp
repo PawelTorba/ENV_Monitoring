@@ -50,7 +50,7 @@ void handleDHTValues(dht_reading_t data, int now) {
 
     char payload[256];
     snprintf(payload, sizeof(payload),
-        "{\"sensorType\":\"dht\",\"temperature\":%.2f,\"humidity\":%.2f,\"timestamp\":%d, \"alert\":%s, alert-object\": {\"temperatureAlert\": %s, \"humidityAlert\": %s}, \"thresholds\": {\"temperatureThreshold\": %.2f, \"humidityThreshold\": %.2f}}",
+        "{\"sensorType\":\"dht\",\"temperature\":%.2f,\"humidity\":%.2f,\"timestamp\":%d, \"alert\":%s, \"alertTemp\": %s, \"alertHum\": %s, \"temperatureThreshold\": %.2f, \"humidityThreshold\": %.2f}",
         data.temperature,
         data.humidity,
         now,
@@ -60,6 +60,19 @@ void handleDHTValues(dht_reading_t data, int now) {
         TEMP_THRESHOLD,
         HUM_THRESHOLD
     );
+
+    // char payload[256];
+    // snprintf(payload, sizeof(payload),
+    //     "{\"sensorType\":\"dht\",\"temperature\":%.2f,\"humidity\":%.2f,\"timestamp\":%d, \"alert\":%s, \"alertTemp\": %s, \"alertHum\": %s, \"thresholds\": {\"temperatureThreshold\": %.2f, \"humidityThreshold\": %.2f}}",
+    //     data.temperature,
+    //     data.humidity,
+    //     now,
+    //     (data.temperature > TEMP_THRESHOLD || data.humidity > HUM_THRESHOLD) ? "true" : "true",
+    //     (data.temperature > TEMP_THRESHOLD) ? "true" : "true",
+    //     (data.humidity > HUM_THRESHOLD) ? "true" : "true",
+    //     TEMP_THRESHOLD,
+    //     HUM_THRESHOLD
+    // );
     
     Serial.printf("[DHT] Payload: %s\r\n", payload);
     sendToIoTHub(payload);
