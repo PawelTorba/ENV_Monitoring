@@ -43,7 +43,7 @@ void setup() {
 
 
     //TIME FOR AZURE IOT HUB
-    configTime(3600, 0, "pool.ntp.org");
+    configTime(0, 0, "pool.ntp.org");
 
     Serial.print("Syncing time...");
     while (time(NULL) < 100000) {
@@ -90,14 +90,5 @@ void loop() {
     Serial.printf("---------------------------------------------\r\n");
 
     //OPÓŹNIENIE 10 SEKUND MIĘDZY KOLEJNYMI PĘTLAMI
-    delay(10000);
+    delay(59600);
 }
-
-// TO DO 
-    // 1 - ALERTY - Azure Function (message routing + function app + alerty na maila) 
-    // 2 - WYKRESY - HTML lokalny -> fetch → Azure Function (z key) -> refresh co 60s 
-
-//NOTE
-// TO CHECK PAYLOADS GO TO https://portal.azure.com/#cloudshell/ 
-// AND RUN: az iot hub monitor-events --hub-name YOUR_HUB_NAME --device-id YOUR_DEVICE_ID --properties all
-// Infrastruktura-krytyczna + Environment-monitoring

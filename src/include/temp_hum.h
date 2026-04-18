@@ -1,14 +1,11 @@
 #ifndef TEMP_HUM_H
 #define TEMP_HUM_H
 
-// TEMP PINOUT
 #define DHT_PIN 27
 
-// THRESHOLDS
-#define TEMP_THRESHOLD 30.0 // 30°C
-#define HUM_THRESHOLD 70.0 // 70% humidity
+#define TEMP_THRESHOLD 30.0
+#define HUM_THRESHOLD 70.0
 
-// DHT DATA STRUCTURE
 typedef struct {
     float temperature;
     float humidity;
@@ -17,7 +14,6 @@ typedef struct {
 void triggerAlarm_DHT(dht_reading_t data, int now);
 void handleDHTSensor(bool simulationMode, int now);
 
-// SIMULATION
 dht_reading_t generateFakeDHT(void);
 
-#endif // TEMP_HUM_H
+#endif

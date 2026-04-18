@@ -5,29 +5,21 @@
 #include "azure.h"
 
 // ===== SIMULATION =====
-
-// stara symulacja gazu
-// int generateFakeGasValue() {
-//     return rand() % 1024;
-// }
-
 int generateFakeGasValue()  {
-    // bardziej realistyczna symulacja poziomu gazu, z okresami normalnego poziomu i krótkimi skokami do wysokiego poziomu
     static int gasLevel = 0;
     static int leakTimer = 0;
 
     if (leakTimer > 0) {
         leakTimer--;
-        gasLevel = 300 + rand() % 200; // wysoki poziom
+        gasLevel = 300 + rand() % 200; 
         return gasLevel;
     }
 
-    // bardzo rzadkie zdarzenie
-    if ((rand() % 2000) == 0) {
+    if ((rand() % 200) == 0) {
         leakTimer = 10 + rand() % 20;
     }
 
-    gasLevel = rand() % 50; // normalne tło
+    gasLevel = rand() % 50;
     return gasLevel;
 }
 
@@ -50,7 +42,6 @@ void handleGasValues(int analogValue, int digitalValue, int now) {
     
     Serial.printf("[GAS] Payload: %s\r\n", payload);
     
-    //TO DO: SEND payload TO AZURE IOT HUB
     sendToIoTHub(payload);
 }
 

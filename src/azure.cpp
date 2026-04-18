@@ -29,20 +29,12 @@ String urlEncode(const String &msg) {
 }
 
 String createSasToken() {
-    // For HTTP API, resource URI must include the device ID
     String resourceUri = String(iothubHost) + "/devices/" + String(deviceId);
     String encodedUri = urlEncode(resourceUri);
 
-    long expiry = time(NULL) + 3600;  // valid for 1 hour
+    long expiry = time(NULL) + 3600; 
     String stringToSign = encodedUri + "\n" + String(expiry);
 
-    //DEBUGGING OUTPUT
-    // Serial.printf("Resource URI: %s\r\n", resourceUri.c_str());
-    // Serial.printf("Encoded URI: %s\r\n", encodedUri.c_str());
-    // Serial.printf("String to sign: %s\r\n", stringToSign.c_str());
-    // Serial.printf("Expiry: %ld\r\n", expiry);
-
-    // Decode device key (Base64)
     size_t keyLen;
     unsigned char key[64];
     int result = mbedtls_base64_decode(key, sizeof(key), &keyLen,
@@ -53,10 +45,6 @@ String createSasToken() {
         Serial.printf("Base64 decode error: %d\r\n", result);
     }
     
-    //DEBUGGING OUTPUT
-    //Serial.printf("Key length: %d\r\n", keyLen);
-
-    // HMAC-SHA256
     unsigned char hmacResult[32];
     mbedtls_md_context_t ctx;
     mbedtls_md_init(&ctx);
@@ -68,7 +56,6 @@ String createSasToken() {
     mbedtls_md_hmac_finish(&ctx, hmacResult);
     mbedtls_md_free(&ctx);
 
-    // Base64 encode signature
     char base64Sig[64];
     size_t sigLen;
     mbedtls_base64_encode((unsigned char *)base64Sig, sizeof(base64Sig), &sigLen,
@@ -77,16 +64,9 @@ String createSasToken() {
     base64Sig[sigLen] = '\0';
     String signature = urlEncode(String(base64Sig));
 
-    //DEBUGGING OUTPUT
-    //.printf("Signature: %s\r\n", signature.c_str());
-
-    // Final SAS token - remove &skn=device
     String sasToken = "SharedAccessSignature sr=" + encodedUri +
                         "&sig=" + signature +
                         "&se=" + String(expiry);
-
-    //DEBUGGING OUTPUT                
-    //Serial.printf("SAS Token: %s\r\n", sasToken.c_str());
 
     return sasToken;
 }

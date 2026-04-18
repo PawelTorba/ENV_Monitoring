@@ -4,19 +4,7 @@
 #include <time.h>
 #include "azure.h"
 
-// THIS DHT SENSOR CODE CAN ONLY HANDLE SIMULATION MODE
-
-// ===== SIMULATION =====
-// stara symulacja DHT
-//dht_reading_t generateFakeDHT() {
-//     dht_reading_t f;
-//     f.temperature = 15 + (rand() % 2500) / 100.0; // 15°C to 40°C
-//     f.humidity = 20 + (rand() % 7000) / 100.0; // 20% to 90% humidity
-//     return f;
-// }
-
 dht_reading_t generateFakeDHT() {
-    // bardziej realne wartości temperatury i wilgotności z lekkimi losowymi zmianami, ale bez nagłych skoków (chyba że raz na jakiś czas)
     static float temp = 22.0;     
     static float hum = 45.0;
 
@@ -32,8 +20,8 @@ dht_reading_t generateFakeDHT() {
     if (hum < 30) hum = 30;
     if (hum > 60) hum = 60;
 
-    if ((rand() % 1000) == 0) { // 0.1% szansy
-        temp += 5 + (rand() % 5); // skok do 30+
+    if ((rand() % 10) == 0) { 
+        temp += 5 + (rand() % 5); 
     }
 
     dht_reading_t f;
@@ -43,7 +31,6 @@ dht_reading_t generateFakeDHT() {
 }
 
 void triggerAlarm_DHT(dht_reading_t data, int now) {
-    //TO DO: ADD LED ALERT
 }
 
 void handleDHTValues(dht_reading_t data, int now) {
@@ -61,19 +48,6 @@ void handleDHTValues(dht_reading_t data, int now) {
         HUM_THRESHOLD
     );
 
-    // char payload[256];
-    // snprintf(payload, sizeof(payload),
-    //     "{\"sensorType\":\"dht\",\"temperature\":%.2f,\"humidity\":%.2f,\"timestamp\":%d, \"alert\":%s, \"alertTemp\": %s, \"alertHum\": %s, \"thresholds\": {\"temperatureThreshold\": %.2f, \"humidityThreshold\": %.2f}}",
-    //     data.temperature,
-    //     data.humidity,
-    //     now,
-    //     (data.temperature > TEMP_THRESHOLD || data.humidity > HUM_THRESHOLD) ? "true" : "true",
-    //     (data.temperature > TEMP_THRESHOLD) ? "true" : "true",
-    //     (data.humidity > HUM_THRESHOLD) ? "true" : "true",
-    //     TEMP_THRESHOLD,
-    //     HUM_THRESHOLD
-    // );
-    
     Serial.printf("[DHT] Payload: %s\r\n", payload);
     sendToIoTHub(payload);
 }
